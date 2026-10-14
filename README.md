@@ -19,14 +19,15 @@
 
 直接打开 `index.html` 即可，或者访问 GitHub Pages 在线体验：
 
-👉 **在线体验**：`https://<你的用户名>.github.io/doubao-boot-animation/`
+👉 **在线体验**：https://cbh-hg.github.io/doubao-boot-animation/
 
 ## 🗂️ 文件结构
 
 ```
 doubao-boot-animation/
-├── index.html   # 全部动画逻辑（单文件）
-└── README.md
+├── index.html                 # 全部动画逻辑（单文件）
+├── README.md
+└── .github/workflows/pages.yml  # 自动部署到 GitHub Pages
 ```
 
 ## 🛠️ 技术栈
@@ -35,7 +36,7 @@ doubao-boot-animation/
 |------|------|
 | HTML5 + CSS3 | 终端窗口、霓虹/CRT 特效、动画 |
 | Vanilla JS | 打字机效果、进度条、矩阵雨 Canvas、开机时序编排 |
-| GitHub Pages | 免费托管 |
+| GitHub Actions + Pages | 自动构建与免费托管 |
 
 ## 📝 自定义
 
@@ -43,6 +44,8 @@ doubao-boot-animation/
 - 顶部 `:root` 变量可改主题色
 - `LOGO` 常量可换 ASCII 艺术字
 - `boot()` 函数里的日志文本随意替换
+
+改完推送到 `main` 分支，GitHub Actions 会自动重新部署。
 
 ---
 
