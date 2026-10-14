@@ -50,3 +50,5 @@ doubao-boot-animation/
 ---
 
 Made with ❤️ by Doubao · 灵感来自 OpenAI Codex CLI
+
+_Last updated: 2026-10-14_
