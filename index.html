@@ -113,6 +113,9 @@
   }
   @keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
   #hello{text-align:center;margin-top:10px;color:var(--white);font-size:clamp(13px,1.8vw,17px);letter-spacing:1px}
+  #enter-wrap{margin-top:14px;text-align:center;font-size:clamp(12px,1.6vw,15px);letter-spacing:1px}
+  #enter-link{color:var(--cyan);text-decoration:none;border-bottom:1px dashed rgba(0,229,255,.55);padding:2px 4px;cursor:pointer;letter-spacing:1px}
+  #enter-link:hover{color:var(--green-bright);text-shadow:0 0 14px var(--cyan);border-bottom-style:solid}
   #hint{
     position:absolute;left:0;right:0;bottom:10px;text-align:center;
     font-size:clamp(10px,1.3vw,12px);color:rgba(0,255,156,.42);letter-spacing:1px;z-index:3;
@@ -335,8 +338,12 @@
     const cur = el(null, '');
     cur.innerHTML = '<span class="cursor"></span>';
 
+    const enter = el(null, '');
+    enter.id = 'enter-wrap';
+    enter.innerHTML = '<span class="dim">➜</span> <a id="enter-link" href="https://www.doubao.com/" target="_blank" rel="noopener">进入豆包对话 →</a>';
+
     online = true;
-    hint.innerHTML = '<b>点击任意位置</b> 或 <b>按任意键</b> 重新启动 · 开机过程中点击可跳过';
+    hint.innerHTML = '<b>点击空白处</b> 重新启动 · <b>点击上方链接</b> 进入豆包';
   }
 
   /* ============ 重新启动 ============ */
@@ -345,7 +352,10 @@
     else { fast = true; }
   }
   addEventListener('keydown', () => { if (online) boot(); else fast = true; });
-  addEventListener('pointerdown', restart);
+  addEventListener('pointerdown', (e) => {
+    if (e.target && e.target.closest && e.target.closest('#enter-link')) return;
+    restart();
+  });
 
   boot();
 })();
