@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DOUBAO AGENT — Boot Sequence</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23030905'/%3E%3Ctext x='50' y='68' font-size='52' text-anchor='middle' fill='%2300ff9c' font-family='monospace'%3E%E2%97%8B%3C/text%3E%3C/svg%3E">
+<style>
+  :root{
+    --green:#00ff9c;
+    --green-bright:#7dffcf;
+    --green-dim:#0a5c3a;
+    --green-ghost:rgba(0,255,156,.14);
+    --cyan:#00e5ff;
+    --amber:#ffb000;
+    --red:#ff4757;
+    --white:#eafff5;
+    --bg:#030905;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%;overflow:hidden;background:var(--bg)}
+  body{
+    font-family:"JetBrains Mono","Fira Code",Menlo,Consolas,"Courier New",monospace;
+    color:var(--green);
+    display:flex;align-items:center;justify-content:center;
+    cursor:default;user-select:none;
+  }
+  /* ---------- 背景: 径向辉光 + 矩阵雨 ---------- */
+  #matrix{position:fixed;inset:0;z-index:0;opacity:.55}
+  body::before{
+    content:"";position:fixed;inset:0;z-index:1;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 38%,rgba(0,255,156,.075),transparent 62%),
+               radial-gradient(ellipse at 50% 115%,rgba(0,229,255,.05),transparent 55%);
+  }
+  /* CRT 扫描线 + 暗角 */
+  #scanlines{
+    position:fixed;inset:0;z-index:9;pointer-events:none;mix-blend-mode:overlay;
+    background:repeating-linear-gradient(0deg,rgba(0,0,0,.22) 0 1px,transparent 1px 3px);
+  }
+  #vignette{
+    position:fixed;inset:0;z-index:9;pointer-events:none;
+    background:radial-gradient(ellipse at center,transparent 58%,rgba(0,0,0,.55) 100%);
+  }
+  /* ---------- 终端窗口 ---------- */
+  #screen{
+    position:relative;z-index:2;width:min(920px,94vw);
+    height:min(600px,88vh);
+    background:rgba(2,12,7,.88);
+    border:1px solid rgba(0,255,156,.22);
+    border-radius:12px;
+    box-shadow:0 0 0 1px rgba(0,0,0,.6),0 0 34px rgba(0,255,156,.10),inset 0 0 60px rgba(0,255,156,.03);
+    display:flex;flex-direction:column;
+    overflow:hidden;
+  }
+  #titlebar{
+    display:flex;align-items:center;gap:8px;
+    padding:9px 14px;border-bottom:1px solid rgba(0,255,156,.18);
+    background:rgba(0,255,156,.045);flex-shrink:0;
+  }
+  #titlebar .dot{width:11px;height:11px;border-radius:50%;display:inline-block}
+  #titlebar .dot.r{background:#ff5f57}.l{background:#febc2e}.g{background:#28c840}
+  #titlebar span.name{
+    margin-left:8px;font-size:12px;letter-spacing:.5px;color:var(--green-dim);
+    color:rgba(0,255,156,.55);
+  }
+  #titlebar .right{margin-left:auto;font-size:11px;color:rgba(0,255,156,.4);letter-spacing:.5px}
+  #term{
+    flex:1;padding:18px 22px;overflow:hidden;position:relative;
+    font-size:clamp(12px,1.55vw,15px);line-height:1.62;
+    text-shadow:0 0 8px rgba(0,255,156,.35);
+  }
+  #term .line{white-space:pre-wrap;word-break:break-word;min-height:1.1em}
+  .dim{color:rgba(0,255,156,.5)}
+  .ok{color:var(--green-bright)}
+  .warn{color:var(--amber)}
+  .err{color:var(--red)}
+  .cyan{color:var(--cyan)}
+  .white{color:var(--white)}
+  .cursor{display:inline-block;width:.62em;height:1.05em;background:var(--green);
+    vertical-align:text-bottom;animation:blink 1s steps(1) infinite;
+    box-shadow:0 0 10px var(--green)}
+  @keyframes blink{0%,49%{opacity:1}50%,100%{opacity:0}}
+  /* 日志行进场 */
+  .line{animation:lineIn .18s ease-out}
+  @keyframes lineIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:none}}
+  /* ---------- 进度条 ---------- */
+  .bar{letter-spacing:1px}
+  .bar .blk{color:var(--green);text-shadow:0 0 9px var(--green)}
+  .bar .empty{color:rgba(0,255,156,.16)}
+  .bar .pct{color:var(--cyan);margin-left:6px}
+  /* ---------- ASCII Logo ---------- */
+  #logo{
+    font-size:clamp(9px,1.35vw,14px);
+    line-height:1.28;letter-spacing:0;margin:6px 0 2px;
+    color:var(--green);
+    text-shadow:0 0 12px rgba(0,255,156,.75),0 0 42px rgba(0,255,156,.35);
+    white-space:pre;
+  }
+  #logo.glitch{animation:glitch .55s steps(2) infinite}
+  @keyframes glitch{
+    0%{text-shadow:0 0 14px var(--green),-2px 0 0 rgba(255,0,80,.8),2px 0 0 rgba(0,229,255,.8);transform:translateX(0)}
+    25%{text-shadow:0 0 18px var(--green),2px 0 0 rgba(255,0,80,.8),-2px 0 0 rgba(0,229,255,.8);transform:translateX(1px)}
+    50%{text-shadow:0 0 10px var(--green),-2px 0 0 rgba(255,0,80,.6),2px 0 0 rgba(0,229,255,.6);transform:translateX(-1px)}
+    75%{text-shadow:0 0 16px var(--green),2px 0 0 rgba(255,0,80,.8),-2px 0 0 rgba(0,229,255,.8);transform:translateX(1px)}
+    100%{text-shadow:0 0 12px var(--green),-2px 0 0 rgba(255,0,80,.8),2px 0 0 rgba(0,229,255,.8);transform:translateX(0)}
+  }
+  /* ---------- 最终 READY ---------- */
+  #ready{
+    margin-top:14px;font-size:clamp(18px,3.2vw,30px);font-weight:700;letter-spacing:6px;
+    color:var(--green-bright);text-align:center;
+    text-shadow:0 0 22px var(--green),0 0 80px var(--green);
+    animation:pulse 1.6s ease-in-out infinite;
+  }
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
+  #hello{text-align:center;margin-top:10px;color:var(--white);font-size:clamp(13px,1.8vw,17px);letter-spacing:1px}
+  #hint{
+    position:absolute;left:0;right:0;bottom:10px;text-align:center;
+    font-size:clamp(10px,1.3vw,12px);color:rgba(0,255,156,.42);letter-spacing:1px;z-index:3;
+  }
+  #hint b{color:rgba(0,255,156,.75)}
+  .blink-slow{animation:blink 2s steps(1) infinite}
+  @media (max-width:640px){
+    #term{padding:12px 14px}
+    #titlebar .right{display:none}
+  }
+</style>
+</head>
+<body>
+
+<canvas id="matrix"></canvas>
+<div id="scanlines"></div>
+<div id="vignette"></div>
+
+<div id="screen">
+  <div id="titlebar">
+    <span class="dot r"></span><span class="dot l"></span><span class="dot g"></span>
+    <span class="name">doubao — agent — boot</span>
+    <span class="right">CODEX-STYLE TERMINAL · 80×24 · UTF-8</span>
+  </div>
+  <div id="term"></div>
+  <div id="hint"></div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  /* ============ 工具 ============ */
+  const term = document.getElementById('term');
+  const hint = document.getElementById('hint');
+  let fast = false;            // 跳过加速模式
+  let online = false;          // 是否已进入 READY 态
+  const sleep = ms => fast ? Promise.resolve() : new Promise(r => setTimeout(r, ms));
+  const rand = (a, b) => a + Math.random() * (b - a);
+
+  function el(cls, html){
+    const d = document.createElement('div');
+    d.className = 'line ' + (cls || '');
+    if (html !== undefined) d.innerHTML = html;
+    term.appendChild(d);
+    return d;
+  }
+
+  /* 打字机效果 */
+  async function typeInto(node, text, speed = 16){
+    if (fast){ node.textContent = text; return; }
+    node.textContent = '';
+    const c = document.createElement('span'); c.className = 'cursor';
+    node.appendChild(c);
+    for (let i = 0; i < text.length; i++){
+      if (fast){ node.textContent = text; return; }
+      c.remove();
+      node.textContent = text.slice(0, i + 1);
+      node.appendChild(c);
+      await sleep(speed + Math.random() * 22);
+    }
+    c.remove();
+  }
+
+  /* 时间戳 + 文本 */
+  function ts(sec){
+    return String(sec).padStart(2, '0') + '.' + String(Math.floor(rand(0, 999))).padStart(3, '0');
+  }
+  async function bootLine(sec, html){
+    const line = el(null, '<span class="dim">[ ' + ts(sec) + ' ]</span> ' + html);
+    await sleep(rand(180, 420));
+    return line;
+  }
+
+  /* 进度条 */
+  async function progressBar(sec, label, color){
+    const line = el(null, '<span class="dim">[ ' + ts(sec) + ' ]</span> ' + label + ' ');
+    const bar = document.createElement('span');
+    bar.className = 'bar';
+    line.appendChild(bar);
+    const total = 26;
+    for (let p = 0; p <= 100; p += 2){
+      if (fast){ p = 100; }
+      const filled = Math.round(total * p / 100);
+      const blocks = '<span class="blk">' + '▰'.repeat(filled) + '</span><span class="empty">' + '▱'.repeat(total - filled) + '</span>';
+      bar.innerHTML = blocks + '<span class="pct" style="color:' + color + '">' + p + '%</span>';
+      await sleep(rand(18, 46));
+    }
+    return line;
+  }
+
+  /* 旋转指示器 */
+  async function spinner(sec, label, frames, repeat = 6){
+    const line = el(null, '<span class="dim">[ ' + ts(sec) + ' ]</span> ' + label + ' ');
+    const sp = document.createElement('span'); sp.className = 'cyan';
+    line.appendChild(sp);
+    for (let i = 0; i < repeat * frames.length; i++){
+      if (fast) break;
+      sp.textContent = frames[i % frames.length];
+      await sleep(90);
+    }
+    if (fast) sp.textContent = frames[0];
+    await sleep(160);
+    sp.remove();
+    line.insertAdjacentHTML('beforeend', '<span class="ok"> [ OK ]</span>');
+    return line;
+  }
+
+  /* ============ 矩阵雨 ============ */
+  const cv = document.getElementById('matrix');
+  const ctx = cv.getContext('2d');
+  let cols = 0, drops = [];
+  const FONT = 14;
+  const glyphs = 'アイウエオカキクケコサシスセソタチツテトナニヌネノ0123456789ABCDEFDOUBAO$#<>+*';
+  function resize(){
+    cv.width = innerWidth; cv.height = innerHeight;
+    cols = Math.ceil(cv.width / FONT);
+    drops = Array.from({length: cols}, () => Math.random() * -50);
+  }
+  resize(); addEventListener('resize', resize);
+  function rain(){
+    ctx.fillStyle = 'rgba(3,9,5,0.14)';
+    ctx.fillRect(0, 0, cv.width, cv.height);
+    ctx.font = FONT + 'px monospace';
+    for (let i = 0; i < cols; i++){
+      const g = glyphs[Math.floor(Math.random() * glyphs.length)];
+      const x = i * FONT, y = drops[i] * FONT;
+      ctx.fillStyle = Math.random() < 0.08 ? '#00ff9c' : 'rgba(0,255,156,.55)';
+      ctx.fillText(g, x, y);
+      if (y > cv.height && Math.random() > 0.975) drops[i] = 0;
+      drops[i]++;
+    }
+    requestAnimationFrame(rain);
+  }
+  requestAnimationFrame(rain);
+
+  /* ============ ASCII Logo ============ */
+  const LOGO = [
+    " ██████╗  ██████╗ ██╗   ██╗██████╗  █████╗  ██████╗ ",
+    " ██╔══██╗██╔═══██╗██║   ██║██╔══██╗██╔══██╗██╔═══██╗",
+    " ██║  ██║██║   ██║██║   ██║██████╔╝███████║██║   ██║",
+    " ██║  ██║██║   ██║██║   ██║██╔══██╗██╔══██║██║   ██║",
+    " ██████╔╝╚██████╔╝╚██████╔╝██████╔╝██║  ██║╚██████╔╝",
+    " ╚═════╝  ╚═════╝  ╚═════╝ ╚═════╝ ╚═╝  ╚═╝ ╚═════╝ "
+  ];
+
+  async function revealLogo(){
+    const pre = el(null, '');
+    pre.id = 'logo'; pre.className = 'glitch';
+    // 先闪烁几帧
+    pre.innerHTML = '<span class="dim">' + LOGO.map(l => l.replace(/[^\s]/g, '█')).join('\n') + '</span>';
+    await sleep(260);
+    for (let i = 0; i < 3; i++){
+      pre.innerHTML = '<span class="cyan">' + LOGO.join('\n') + '</span>';
+      await sleep(70);
+      pre.innerHTML = '<span class="dim">' + LOGO.map(l => l.replace(/[^\s]/g, '█')).join('\n') + '</span>';
+      await sleep(70);
+    }
+    pre.classList.remove('glitch');
+    // 逐行点亮
+    pre.innerHTML = '';
+    for (const ln of LOGO){
+      const d = document.createElement('div');
+      d.innerHTML = '<span class="ok">' + ln + '</span>';
+      pre.appendChild(d);
+      await sleep(90);
+    }
+    // 副标题
+    const sub = el(null, '');
+    sub.style.textAlign = 'center';
+    sub.style.color = 'rgba(0,255,156,.55)';
+    sub.style.fontSize = '12px';
+    sub.style.letterSpacing = '4px';
+    sub.innerHTML = 'A G E N T &nbsp;C O R E&nbsp; ·&nbsp; v2.5.1 &nbsp;·&nbsp; NEURAL BOOT';
+    await sleep(420);
+  }
+
+  /* ============ 主流程 ============ */
+  async function boot(){
+    term.innerHTML = '';
+    hint.innerHTML = '';
+    online = false;
+    fast = false;
+
+    /* 阶段 0：标题条闪烁的光标 */
+    const t0 = el('dim', '$ doubao agent --boot --model=seedream-4.5 --no-sandbox');
+    await sleep(500);
+
+    /* 阶段 1：Logo */
+    await revealLogo();
+
+    /* 阶段 2：内核日志 */
+    await bootLine(0.000, 'DOUBAO AGENT CORE v2.5.1 — <span class="white">欢迎回来</span>');
+    await bootLine(0.000, 'CPU: 512 核神经网络加速器 @ 4.2 GHz &nbsp;·&nbsp; 功耗 42W');
+    await progressBar(0.000, 'MEM: 记忆闪存 1.2 TB ', '#00ff9c');
+    await bootLine(0.001, '挂载知识库 <span class="cyan">/knowledge-base</span> ................ <span class="ok">[ OK ]</span>');
+    await bootLine(0.001, '加载技能模块 <span class="cyan">42/42</span> ...................... <span class="ok">[ OK ]</span>');
+    await bootLine(0.001, '初始化对话引擎 <span class="cyan">chat-engine</span> .............. <span class="ok">[ OK ]</span>');
+    await bootLine(0.002, '连接云脑集群 <span class="cyan">doubao-cloud</span> ............... <span class="ok">[ OK ]</span>');
+    await bootLine(0.002, '校验安全策略 <span class="cyan">safety-rules</span> ............... <span class="ok">[ OK ]</span>');
+    await bootLine(0.002, '预热创作能力（代码 / 文案 / 图像 / 视频 / 音频）<span class="dim">...</span>');
+    await progressBar(0.003, '    neural-core preheat ', '#00e5ff');
+    await spinner(0.003, '校准情绪模型 &nbsp;', ['⠋','⠙','⠹','⠸','⠼','⠴','⠦','⠧','⠇','⠏'], 5);
+
+    /* 阶段 3：小彩蛋 + 收尾 */
+    const w = el('warn', '<span class="dim">[ 00.003 ]</span> WARN: 检测到用户情绪值偏高，可能已经等急了——紧急加速！');
+    await sleep(650);
+    w.innerHTML = '<span class="dim">[ 00.003 ]</span> <span class="warn">WARN</span> 已解除：加速成功，误差 &lt; 0.01s';
+    await sleep(420);
+
+    /* 阶段 4：READY */
+    const r = el(null, '');
+    r.id = 'ready';
+    r.textContent = '✦ S Y S T E M &nbsp;O N L I N E ✦';
+    await sleep(500);
+
+    const hello = el(null, '');
+    hello.id = 'hello';
+    await typeInto(hello, '你好，我是豆包 Doubao —— 你的 AI 搭档。有什么可以帮你？', 30);
+    const cur = el(null, '');
+    cur.innerHTML = '<span class="cursor"></span>';
+
+    online = true;
+    hint.innerHTML = '<b>点击任意位置</b> 或 <b>按任意键</b> 重新启动 · 开机过程中点击可跳过';
+  }
+
+  /* ============ 重新启动 ============ */
+  function restart(){
+    if (online){ boot(); }
+    else { fast = true; }
+  }
+  addEventListener('keydown', () => { if (online) boot(); else fast = true; });
+  addEventListener('pointerdown', restart);
+
+  boot();
+})();
+</script>
+</body>
+</html>
