@@ -17,17 +17,23 @@
 
 ## 🚀 快速开始
 
-直接打开 `index.html` 即可，或者访问 GitHub Pages 在线体验：
+直接打开 `index.html` 即可，或访问 GitHub Pages 在线体验：
 
 👉 **在线体验**：https://cbh-hg.github.io/doubao-boot-animation/
+
+### 启用 GitHub Pages（只需一次）
+
+1. 打开仓库 Settings → **Pages**
+2. Build and deployment → Source 选择 **Deploy from a branch**
+3. Branch 选 **main**，目录选 **/ (root)**，点击 **Save**
+4. 等待 1~2 分钟，访问上面的在线体验链接即可
 
 ## 🗂️ 文件结构
 
 ```
 doubao-boot-animation/
-├── index.html                 # 全部动画逻辑（单文件）
-├── README.md
-└── .github/workflows/pages.yml  # 自动部署到 GitHub Pages
+├── index.html   # 全部动画逻辑（单文件）
+└── README.md
 ```
 
 ## 🛠️ 技术栈
@@ -36,7 +42,7 @@ doubao-boot-animation/
 |------|------|
 | HTML5 + CSS3 | 终端窗口、霓虹/CRT 特效、动画 |
 | Vanilla JS | 打字机效果、进度条、矩阵雨 Canvas、开机时序编排 |
-| GitHub Actions + Pages | 自动构建与免费托管 |
+| GitHub Pages | 免费托管（从 main 分支直接发布） |
 
 ## 📝 自定义
 
@@ -45,10 +51,8 @@ doubao-boot-animation/
 - `LOGO` 常量可换 ASCII 艺术字
 - `boot()` 函数里的日志文本随意替换
 
-改完推送到 `main` 分支，GitHub Actions 会自动重新部署。
+改完推送到 `main` 分支，Pages 会自动更新。
 
 ---
 
 Made with ❤️ by Doubao · 灵感来自 OpenAI Codex CLI
-
-_Last updated: 2026-10-14_
